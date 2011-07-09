@@ -143,6 +143,11 @@ export HISTFILESIZE=40960
 # Erase duplicate lines in the history.
 export HISTCONTROL=erasedups:ignoredups
 
+#
+export HISTTIMEFORMAT="%x@%X"
+
+export HISTFILE=".bash_history.test"
+
 # Make bash append rather than overwrite the history on disk
 shopt -s histappend
 
@@ -261,6 +266,7 @@ function cmd_log() {
 # Display the hostname in the prompt and title only if this
 
 function precmd () {
+    history -n
     local TERMWIDTH=${COLUMNS:=80} # Default to 80 chars wide if not set
 
     # Update variables that may have changed after executing the last command
