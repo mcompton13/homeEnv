@@ -51,9 +51,6 @@ export TEMP=/tmp
 
 export EDITOR="vim"
 
-ERROR_LOG=${HOME}/".bash_errorlog$$"
-ERROR_PIPE=${HOME}/".errorpipe$$"
-
 # Variables containing escape sequences for terminal colors
 txtBlk='\e[0;30m' # Black - Regular
 txtRed='\e[0;31m' # Red
@@ -261,93 +258,9 @@ function cmd_log() {
     ("$@" > >(tee "${OUT_LOG}" | sed "s/^/$(echo -en ${txtRst})/") 2> >(tee "${ERR_LOG}" | sed "s/^/$(echo -en ${bldRed})/" >&2)) &> >(tee "${ALL_LOG}") 
 }
 
-function start_logging() {
-    # Check to see if ERROR_LOG and ERROR_PIPE need to be defined.
-    if [ -z "$ERROR_LOG" ]; then
-        ERROR_LOG=output.log
-    fi
-    if [ -z "$ERROR_PIPE" ]; then
-        ERROR_PIPE=output.pipe
-    fi
-    # Make sure that we're not already logging.
-    if [ -n "$ERROR_PID" ]; then
-        echo "Logging already started!"
-        return 1
-    fi
-
-    # Always remove the log and pipe first.
-    rm -f $ERROR_PIPE
-    # Delete the logfile first if told to.
-    if [ "$1" = delete_existing_logfile ]; then
-        rm -f $ERROR_LOG
-    fi
-
-    mkfifo $ERROR_PIPE
-    # Colors error output to terminal red. Doesn't work well with commands
-    # that have interactive prompts like rm -i
-    #tee -a $ERROR_LOG < $ERROR_PIPE | sed  "s/^/$(echo -en ${txtRed})/" &
-    # Also colors error output to terminal red and works fine with interactive
-    # prompts, but error text gets jumbled up with stdout text.
-    #tee -a $ERROR_LOG < $ERROR_PIPE | (IFS=''; while read -d ':' -n 1 char; do echo -ne "${txtRed}${char}${txtRst}"; done) &
-    tee -a $ERROR_LOG < $ERROR_PIPE &
-    ERROR_PID=$!
-
-    exec 3>&2 2>$ERROR_PIPE # Log only errors
-    trap 'stop_logging; start_logging' HUP INT QUIT TERM
-    trap 'stop_logging; rm -f "${ERROR_LOG}"; trap - EXIT' EXIT
-}
-
-function stop_logging() {
-    # Make sure that we're currently logging.
-    if [ -z "$ERROR_PID" ]; then
-        #echo "Logging not yet started!"
-        return 1
-    fi
-    exec 2>&3 3>&- # Clean up error-only logging
-    wait $ERROR_PID
-    rm -f $ERROR_PIPE
-    unset ERROR_PID
-    # Unset the cleanup trap
-    trap - HUP INT QUIT TERM
-}
-
-declare -a lastErrStart=(0)
-declare -a lastErrEnd=(0)
-declare -a lastErrRetVal=(-1)
-errStart=0
-
-function lasterr() {
-    local cmdNum=1
-    if [ ! -z "${1}" ]; then
-        cmdNum=${1}
-    fi
-
-    # Count back from the end, newer entries are at the end of the array
-    local cmdIndex=$((${#lastErrStart[*]} - ${cmdNum}))
-    if [ ${cmdIndex} -lt 0 ]; then
-        cmdIndex=0
-    fi
-
-    local endLine=$((${lastErrEnd[${cmdIndex}]} + 0))
-    local numLines=$((${endLine} - ${lastErrStart[${cmdIndex}]}))
-
-    if [ ${endLine} -ge 0 ] && [ ${numLines} -gt 0 ] && [ -f ${ERROR_LOG} ]; then
-        head -${endLine} ${ERROR_LOG} | tail -${numLines}
-    fi
-}
-
 # Display the hostname in the prompt and title only if this
 
 function precmd () {
-    lastCmdRetVal=$?
-    #stop_logging
-    # Use length of lastErrStart so the two arrays stay in sync
-    if [ ${lastCmdRetVal} -ne 0 ] && [ -f ${ERROR_LOG} ]; then
-        lastErrRetVal[${#lastErrStart}]=${lastCmdRetVal}
-        lastErrStart[${#lastErrStart}]=${errStart}
-        lastErrEnd[${#lastErrStart}]=$(wc -l < ${ERROR_LOG})
-    fi
-
     local TERMWIDTH=${COLUMNS:=80} # Default to 80 chars wide if not set
 
     # Update variables that may have changed after executing the last command
@@ -424,22 +337,11 @@ function preexec () {
         preexec_screen_title "${cmdTitle}${titleSep}`preexec_screen_user_at_host`:${titlePWD}"
     fi
 
-#    exec 3>&1 4>&2
-#    trap 'exec 2>&4 1>&3; catchStdErr="no"' 0 1 2 3
-#    exec 3>&1 1>&2 2>&3 | tee ~/.cmd_stderr
-#    catchStdErr="yes"
- 
     # Append the current command to the history file.
     history -a
 
     # Reset text color to the terminal default for the command output
     echo -ne "${txtRst}" > $(tty)
-
-    #start_logging
-    # Store where the errorlog will start for the command about to execute
-    if [ -f ${ERROR_LOG} ]; then
-        errStart=$(wc -l < ${ERROR_LOG})
-    fi
 }
 
 preexec_install
