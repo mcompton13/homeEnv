@@ -1,0 +1,13 @@
+[color]
+	ui = auto
+[color "branch"]
+	current = green
+    local = yellow
+    remote = red
+[color "status"]
+	added = green
+    changed = yellow
+    untracked = red
+[user]
+	name = Matthew Compton
+	email = mcompton@solekai.com

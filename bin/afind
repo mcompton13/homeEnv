@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# android find
+## filter out paths you never want under the android tree
+## also skips the kernel paths.  If you want the kernel, use akfind
+## 
+## -path -prune seems to work on paths that are at the "start" of the tree,
+## but fails on paths in the middle... ie, ./out/* comes out, but 
+## blah/blah/.git/blah/blah i can't remove.
+
+START=$1
+shift
+#echo $START:$*
+find $START -path './out' -prune -o -path '.repo' -prune -o -path './kernel' -prune -o $@ | grep -v .git | grep -v drawable | grep -v docs

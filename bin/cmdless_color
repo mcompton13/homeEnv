@@ -1,0 +1,43 @@
+#!/bin/bash
+
+opts=( "$@" )
+#echo "1 Opts: ${opts[@]}"
+#echo "1 Args: ${@}"
+
+# Default to removing one argument when output is not to TTY
+numberOptsToRemove=1;
+
+# If the first option is a number...
+if [ ! -z "${opts[0]##*[!0-9]*}" ]; then
+    # It is specifying the number of options to remove
+    # when not outputing to TTY
+    numberOptsToRemove=${opts[0]}
+    # Remove the number from the options
+    unset opts[0]
+fi
+
+set -- "${opts[@]}"
+opts=( "$@" )
+
+#echo "2 Opts: ${opts[@]}"
+#echo "2 Args: ${@}"
+
+# Don't remove any options if output is to TTY
+if [ -t 1 ]; then
+    numberOptsToRemove=0
+fi
+
+# Remove the options that are only for terminal output,
+# They are expected to be the first options.
+while [ "${numberOptsToRemove}" -gt 0 ]; do
+    unset opts[${numberOptsToRemove}]
+    numberOptsToRemove=$((${numberOptsToRemove}-1))
+done
+set -- "${opts[@]}"
+
+#echo "3 Opts: ${opts[@]}"
+#echo "3 Args: ${@}"
+
+cmdless "${@}"
+
+exit $?

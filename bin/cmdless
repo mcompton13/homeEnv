@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -o pipefail
+
+# Pipe to less only if output is to tty
+if [ -t 1 ]; then
+    "$@" | less -FRX
+    ret=$?
+else
+    "$@"
+    ret=$?
+fi
+
+exit $ret
