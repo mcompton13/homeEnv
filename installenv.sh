@@ -21,3 +21,5 @@ find . -type f | while read f; do
     echo "Linking '${fromFileName}' to '${toFileName}'"
     ln -s "${fromFileName}" "${toFileName}"
 done
+
+popd
