@@ -136,7 +136,7 @@ export HISTFILESIZE=40960
 export HISTCONTROL=erasedups:ignoredups
 
 # Store time in history file and display it for history command with this format
-export HISTTIMEFORMAT=$(echo -e "%Y/%m/%d(${txtYlw}%X${txtRst}) ")
+export HISTTIMEFORMAT=$(echo -e "%Y/%m/%d(${txtYlw}%H:%M:%S${txtRst}) ")
 
 export HISTFILE="${HOME}/.bash_history.test"
 
