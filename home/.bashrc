@@ -15,8 +15,6 @@
 # Non-Interactive Non-Login (running scripts)
 #   1. Copy parent env
 
-
-
 # $PS1 is only set in interactive mode.
 if [ -n "$PS1" ]; then
 # Only run the rest in interactive mode
@@ -34,12 +32,6 @@ if [ "$(which dircolors 2>/dev/null)" ]; then
 fi
 
 export PATH=$PATH:${HOME}/bin
-
-export JAVA_HOME=/usr/lib/jvm/java-6-sun-1.6.0.24
-export JRE_HOME=/usr/lib/jvm/java-6-sun-1.6.0.24/jre
-
-# For Perforce
-export P4PORT=soldatasrv01:1666
 
 # TMP and TEMP are defined in the Windows environment.  Leaving
 # them set to the default Windows temporary directory can have
@@ -71,7 +63,7 @@ bldBlu='\e[1;34m' # Blue
 bldPur='\e[1;35m' # Purple
 bldCyn='\e[1;36m' # Cyan
 bldWht='\e[1;37m' # White
-unkBlk='\e[4;30m' # Black - Underline
+undBlk='\e[4;30m' # Black - Underline
 undRed='\e[4;31m' # Red
 undGrn='\e[4;32m' # Green
 undYlw='\e[4;33m' # Yellow
@@ -146,8 +138,13 @@ export HISTFILESIZE=40960
 # Erase duplicate lines in the history.
 export HISTCONTROL=erasedups:ignoredups
 
+# Store time in history file and display it for history command with this format
+export HISTTIMEFORMAT=$(echo -e "%Y/%m/%d(${txtYlw}%X${txtRst}) ")
+
+#export HISTFILE="${HOME}/.bash_history.test"
+
 # Make bash append rather than overwrite the history on disk
-shopt -s histappend
+#shopt -s histappend
 
 # Ignore some controlling instructions
 # HISTIGNORE is a colon-delimited list of patterns which should be excluded.
@@ -168,15 +165,6 @@ bind '"\e[B": history-search-forward'
 
 # Functions
 # #########
-
-# Function for seting up Perforce environment to work with maestro client
-function goto-maestro() {
-    export SANDBOX=/home/mcompton/Projects/mcompton-maestro
-    source ${SANDBOX}/sandbox.bash
-    goto-branch b-server-3-4 dev-server
-    export P4CLIENT=mcompton-maestro
-    BRANCHNAME=b-server-3-4
-}  
 
 # Returns a string representing the current working directory that is no
 # longer than $MAX_LEN characters.
@@ -240,6 +228,74 @@ else
         return
     }
 fi
+
+function cmd_timer() {
+    local SHOW_DATE_MIN_DURATION=$((5 * 60)) # 5 minutes
+
+    local startDate=$(date)
+    "$@"
+    local cmdRetValue=$?
+    local endDate=$(date)
+    local start=$(date --date="${startDate}" +%s)
+    local end=$(date --date="${endDate}" +%s)
+    local cmdDuration=$((end - start))
+    local dateString=""
+    if [[ ${cmdDuration} -ge ${SHOW_DATE_MIN_DURATION} ]]; then
+        dateString="${endDate}: "
+    fi
+
+    local timerString="${txtGrn}${dateString}Finished sucessfully after "
+    if [[ $cmdRetValue -ne 0 ]]; then
+        timerString="${bldRed}${dateString}Failed with exit code ${cmdRetValue} after "
+    fi
+    echo -e "${timerString}$(print_duration ${cmdDuration})${txtRst}"
+}
+
+function print_duration() {
+    local durationSeconds=$@
+    if [[ ${durationSeconds} -eq 0 ]]; then
+        echo "less than 1 second"
+        return
+    fi
+
+    local hours=$((${durationSeconds} / 3600))
+    durationSeconds=$((${durationSeconds} - (${hours} * 3600)))
+    local minutes=$((${durationSeconds} / 60))
+    local seconds=$((${durationSeconds} - (${minutes} * 60)))
+    local hoursString=""
+    local minutesString=""
+    local secondsString=""
+
+    if [[ ${hours} -gt 0  ]]; then
+        hoursString="${hours}_hour"
+    fi
+    if [[ ${hours} -gt 1 ]]; then
+        hoursString="${hoursString}s"
+    fi
+    if [[ ${minutes} -gt 0  ]]; then
+        minutesString="${minutes}_minute"
+    fi
+    if [[ ${minutes} -gt 1 ]]; then
+        minutesString="${minutesString}s"
+    fi
+    if [[ ${seconds} -gt 0  ]]; then
+        secondsString="${seconds}_second"
+    fi
+    if [[ ${seconds} -gt 1 ]]; then
+        secondsString="${secondsString}s"
+    fi
+
+    local durStringArray=("${hoursString}" "${minutesString}"  "${secondsString}")
+    local durString=""
+    local sep=""
+    for str in ${durStringArray[@]}; do
+        durString="${durString}${sep}${str}"
+        sep=", "
+    done
+
+    echo "${durString//_/ }"
+    #echo "${hours} Hours, ${minutes} Minutes, ${seconds} Seconds"
+}
 
 function cmd_log() {
     local opts=( "$@" )
@@ -348,6 +404,9 @@ function precmd () {
         lastErrEnd[${#lastErrStart}]=$(wc -l < ${ERROR_LOG})
     fi
 
+    # Get the latest command history
+    history -c
+    history -r
     local TERMWIDTH=${COLUMNS:=80} # Default to 80 chars wide if not set
 
     # Update variables that may have changed after executing the last command

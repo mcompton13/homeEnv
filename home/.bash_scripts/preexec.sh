@@ -105,7 +105,8 @@ function preexec_invoke_exec () {
     # variable, but using history here is better in some ways: for example, "ps
     # auxf | less" will show up with both sides of the pipe if we use history,
     # but only as "ps auxf" if not.
-    local this_command=`history 1 | sed -e "s/^[ ]*[0-9]*[ ]*//g"`;
+    local this_command_time=$(history 1 | sed -e "s/^[ ]*[0-9]*[ ]*\([^ ]*\)[ ]*.*/\\1/g")
+    local this_command=`history 1 | sed -e "s/^[ ]*[0-9]*[ ]*[^ ]*[ ]*//g"`;
 
     # Disable these two options now that the DEBUG trap has been called. This
     # options were causing commands with pipes (|) to go to the background.
