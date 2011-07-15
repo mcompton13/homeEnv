@@ -344,7 +344,7 @@ function precmd () {
         titleHost=${HOSTNAME%%.*}
     fi
 
-    if [ "${SSH_CLIENT}" ]; then
+    if [ -n "${SSH_CLIENT:+x}" ]; then
         # Only show the hostname in the title if we're on a remote machine
         titleHost=${HOSTNAME%%.*}
         # Change the separator so it works on all remote machines
@@ -410,7 +410,11 @@ preexec_install
 
 # Colors used for the prompt
 defaultColor="\["${txtRst}"\]"
-hostColor="\["${bldCyn}"\]"
+if [ -n "${SSH_CLIENT:+x}" ]; then
+    hostColor="\["${bldPur}"\]"
+else
+    hostColor="\["${bldCyn}"\]"
+fi
 pwdColor="\["${bldBlu}"\]"
 branchColor="\["${bldPur}"\]"
 
