@@ -19,10 +19,15 @@
 if [ -n "$PS1" ]; then
 # Only run the rest in interactive mode
 
-
-if [ -f ${HOME}/.bash_scripts/preexec.sh ]; then
-    source ${HOME}/.bash_scripts/preexec.sh
-fi
+# Source all of the files in the ~/.bashrc.d directory
+bashrcDFiles=$(find ${HOME}/.bashrc.d -type f -o -type l)
+for f in ${bashrcDFiles}; do
+    file=${f##*/}
+    # Skip the file if the name starts with a period
+    if [[ ! ${file:0:1} = "." ]]; then
+        source ${f}
+    fi
+done
 
 # Environment Variables
 # #####################
