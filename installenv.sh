@@ -1,6 +1,7 @@
 #!/bin/bash
 
-DEST_DIR_BASE=${HOME}
+# Default to user's home dir if a destination is not specified as a parameter.
+DEST_DIR_BASE=${1:-${HOME}}
 
 # Go to the directory containing this script
 pushd "${0%/*}"
@@ -17,7 +18,11 @@ fi
 echo "Installing from '${HOME_ENV_ROOT}' to '${DEST_DIR_BASE}'"
 pushd ${HOME_ENV_ROOT}
 
-
+# From http://stackoverflow.com/questions/2564634/bash-convert-absolute-path-into-relative-path-given-a-current-directory
+# Calculates the relative path for inputs that are absolute paths or relative
+# paths without . or ..
+#
+# Usage: relativePath from to
 function relativePath () {
     if [[ "$1" == "$2" ]]
     then
