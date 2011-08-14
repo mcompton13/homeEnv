@@ -1,33 +1,41 @@
 # .bashrc
 
-# 4 Cases:
-# Interactive Login (Login using /bin/login, ssh...)
+# 3 Cases:
+# Interactive Login (Login using /bin/login, ssh, su - <USER_NAME>)
 #   1. Runs /etc/profile 
 #   2. Runs ~/.bash_profile, ~/.bash_login, or ~/.profile, whichever is found
 #      first
-# Non-Interactive Login (scp, I think, need to verify)
-#   1. Runs /etc/profile 
-#   2. Runs ~/.bash_profile, ~/.bash_login, or ~/.profile, whichever is found
-#      first
-# Interactive Non-Login (su, xterm, gnome-terminal, run bash w/o args...)
-#   1. Copy parent env
+#   3. One of the above is then configured to run ~/.bashrc
+# Interactive Non-Login (su, xterm, gnome-terminal, run bash w/o args, scp, run
+# a command remotely using ssh...)
+#   1. Copy parent exported env
 #   2. Run ~/.bashrc
-# Non-Interactive Non-Login (running scripts)
-#   1. Copy parent env
+# Non-Interactive Non-Login (running scripts, bash -c <COMMAND>)
+#   1. Copy parent exported env
+
+# Detect if this is an interactive shell
+if [ -n "${PS1}" ]; then
+    export INTERACTIVE_SHELL=1
+fi
+
+# Detect if this is a remote shell
+if [ -n "${SSH_CLIENT:+x}" ]; then
+    export REMOTE_SHELL=1
+fi
+
+# Source all of the .bash files in the ~/.bashrc.d directory
+if [ -d ${HOME}/.bashrc.d ]; then
+    for f in ${HOME}/.bashrc.d/*.bash; do
+        if [ -r ${f} ]; then
+            source ${f}
+        fi
+    done
+    unset f
+fi
 
 # $PS1 is only set in interactive mode.
 if [ -n "$PS1" ]; then
 # Only run the rest in interactive mode
-
-# Source all of the files in the ~/.bashrc.d directory
-bashrcDFiles=$(find ${HOME}/.bashrc.d -type f -o -type l)
-for f in ${bashrcDFiles}; do
-    file=${f##*/}
-    # Skip the file if the name starts with a period
-    if [[ ! ${file:0:1} = "." ]]; then
-        source ${f}
-    fi
-done
 
 # Environment Variables
 # #####################
@@ -35,54 +43,6 @@ done
 if [ "$(which dircolors 2>/dev/null)" ]; then
     eval $(dircolors)
 fi
-
-export PATH=$PATH:${HOME}/bin
-
-# TMP and TEMP are defined in the Windows environment.  Leaving
-# them set to the default Windows temporary directory can have
-# unexpected consequences.
-# set them to the Cygwin temporary directory
-# or to any other tmp directory of your choice
-export TMP=/tmp
-export TEMP=/tmp
-
-export EDITOR="vim"
-
-# Variables containing escape sequences for terminal colors
-txtBlk='\e[0;30m' # Black - Regular
-txtRed='\e[0;31m' # Red
-txtGrn='\e[0;32m' # Green
-txtYlw='\e[0;33m' # Yellow
-txtBlu='\e[0;34m' # Blue
-txtPur='\e[0;35m' # Purple
-txtCyn='\e[0;36m' # Cyan
-txtWht='\e[0;37m' # White
-bldBlk='\e[1;30m' # Black - Bold
-bldRed='\e[1;31m' # Red
-bldGrn='\e[1;32m' # Green
-bldYlw='\e[1;33m' # Yellow
-bldBlu='\e[1;34m' # Blue
-bldPur='\e[1;35m' # Purple
-bldCyn='\e[1;36m' # Cyan
-bldWht='\e[1;37m' # White
-undBlk='\e[4;30m' # Black - Underline
-undRed='\e[4;31m' # Red
-undGrn='\e[4;32m' # Green
-undYlw='\e[4;33m' # Yellow
-undBlu='\e[4;34m' # Blue
-undPur='\e[4;35m' # Purple
-undCyn='\e[4;36m' # Cyan
-undWht='\e[4;37m' # White
-bakBlk='\e[40m'   # Black - Background
-bakRed='\e[41m'   # Red
-badGrn='\e[42m'   # Green
-bakYlw='\e[43m'   # Yellow
-bakBlu='\e[44m'   # Blue
-bakPur='\e[45m'   # Purple
-bakCyn='\e[46m'   # Cyan
-bakWht='\e[47m'   # White
-txtRst='\e[0m'    # Text Reset
-
 
 # Shell Options
 # #############
@@ -106,26 +66,6 @@ set -o pipefail
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
-
-
-# Completion options
-# ##################
-
-# Turn on programmable completion enhancements.
-# Any completions you add in ~/.bash_completion are sourced last.
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    source /etc/bash_completion
-
-    # Overwrite bash_completion functions so it doesn't expand ~
-    function _expand()
-    {
-        return 0
-    }
-    function __expand_tilde_by_ref()
-    {
-        return 0
-    }
-fi
 
 
 # History Options
@@ -296,7 +236,6 @@ function print_duration() {
     done
 
     echo "${durString//_/ }"
-    #echo "${hours} Hours, ${minutes} Minutes, ${seconds} Seconds"
 }
 
 function cmd_log() {
@@ -318,8 +257,6 @@ function cmd_log() {
     # Same as above, but colorize stderr red
     ("$@" > >(tee "${OUT_LOG}" | sed "s/^/$(echo -en ${txtRst})/") 2> >(tee "${ERR_LOG}" | sed "s/^/$(echo -en ${bldRed})/" >&2)) &> >(tee "${ALL_LOG}") 
 }
-
-# Display the hostname in the prompt and title only if this
 
 function precmd () {
     # Get the latest command history
@@ -349,7 +286,7 @@ function precmd () {
         titleHost=${HOSTNAME%%.*}
     fi
 
-    if [ -n "${SSH_CLIENT:+x}" ]; then
+    if [ -n "${REMOTE_SHELL}" ]; then
         # Only show the hostname in the title if we're on a remote machine
         titleHost=${HOSTNAME%%.*}
         # Change the separator so it works on all remote machines
@@ -415,7 +352,7 @@ preexec_install
 
 # Colors used for the prompt
 defaultColor="\["${txtRst}"\]"
-if [ -n "${SSH_CLIENT:+x}" ]; then
+if [ -n "${REMOTE_SHELL}" ]; then
     hostColor="\["${bldPur}"\]"
 else
     hostColor="\["${bldCyn}"\]"
