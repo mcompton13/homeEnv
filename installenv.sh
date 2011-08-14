@@ -3,6 +3,12 @@
 # Default to user's home dir if a destination is not specified as a parameter.
 DEST_DIR_BASE=${1:-${HOME}}
 
+# Make the destination dir, and get the absolute path to the destination dir.
+mkdir -p "${DEST_DIR_BASE}"
+pushd "${DEST_DIR_BASE}"
+DEST_DIR_BASE=$(pwd)
+popd
+
 # Go to the directory containing this script
 pushd "${0%/*}"
 
@@ -76,10 +82,13 @@ find . -type d | while read d; do
    mkdir -p "${destDir}"
 done
 
-find . -type f | while read f; do
-    fileName="${f#.}"
-    fromFileName="${HOME_ENV_ROOT}${fileName}"
-    toFileName="${DEST_DIR_BASE}${fileName}"
+# Get list of all the files, ignoring VIM's temp files .swp, .swo, and .swn
+installFiles=$(find . -type f -a ! -name ".*.sw[pon]")
+for f in ${installFiles}; do
+    fileName="${f##*/}"
+    filePathName="${f#.}"
+    fromFileName="${HOME_ENV_ROOT}${filePathName}"
+    toFileName="${DEST_DIR_BASE}${filePathName}"
     # Check to see if the destination is already a link to the correct file
     if [ -h ${toFileName} ] && [ "$(readlink -f ${toFileName})" = "${fromFileName}" ]; then
         # Already linked to the correct file, skip
