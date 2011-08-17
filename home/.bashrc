@@ -378,8 +378,19 @@ PS1="${defaultColor}["\
 # application.  To override the alias instruction use a \ before, ie
 # \rm will call the real rm not the alias.
 
-# Now the aliases we've defined will work in sudo
-alias sudo='A=`alias` sudo  '
+# Make sudo an alias so other aliases get expanded and work in the sudo env
+alias sudo='sudo  '
+
+# Alias all of the executeables in the user's home bin to their full path so
+# that they will work in sudo
+if [ -d ${HOME}/bin ]; then
+    for f in ${HOME}/bin/*; do
+        if [ -x ${f} ]; then
+            alias ${f##*/}="${f}"
+        fi
+    done
+    unset f
+fi
 
 # Interactive operation...
 alias rm='rm -i'
@@ -392,19 +403,21 @@ alias du='du -h'
 
 # Misc :)
 alias less='less -FRX'                          # raw control characters
-alias more='LESS_IS_MORE=1 less -FRX'           # Use less in place of more
+alias more='LESS_IS_MORE=1 less'                # Use less in place of more
 alias whence='type -a'                          # where, of a sort
 alias grep='cmdless_color grep --color=always'  # show differences in color, page results
 alias find='cmdless find'                       # page results
-alias vi='vim'
+alias dmesg='cmdless dmesg'                     # page results
+# Alias vim to vi if vim was found on the system
+if [ "${EDITOR}" = "vim" ]; then
+    alias vi='vim'
+fi
 
 # Some shortcuts for different directory listings
-# Using colors and piped to less for tty
-alias ls='cmdless_color 2 ls --color=always -w${COLUMNS} -hx --group-directories-first'
-alias la='cmdless_color 2 ls --color=always -w${COLUMNS} -Ahx --group-directories-first' # all but . and ..
-alias ll='cmdless_color 2 ls --color=always -w${COLUMNS} -hl --group-directories-first'  # long list
-
-alias lasterr='cmdless lasterr'
+# Using colors and piped to less when output to TTY
+alias ls='cmdless_color 2 ls --color=always -w${COLUMNS} -hC --group-directories-first'
+alias la='ls -A' # all but . and ..
+alias ll='ls -Al'  # all with long detailed list
 
 
 fi # closing if [ -n "$PS1" ]; then

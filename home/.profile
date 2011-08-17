@@ -65,3 +65,9 @@ export bakCyn='\e[46m'   # Cyan
 export bakWht='\e[47m'   # White
 export txtRst='\e[0m'    # Text Reset
 
+# Set env so less uses lesspipe for more friendly behavior when viewing non-text
+# input files, see lesspipe(1)
+if [ -x /usr/bin/lesspipe ]; then
+    eval "`SHELL=/bin/sh lesspipe`"
+fi
+
