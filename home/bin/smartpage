@@ -1,35 +1,46 @@
-#!/bin/bash
+#!/bin/sh
 
 # Default to removing one argument when output is not to TTY
-numberArgsToRemove=1;
+numberArgsToRemove=0;
 
 # If the first option is a number...
 if [ ! -z "${1##*[!0-9]*}" ]; then
     # ...it is specifying the number of args to remove when not outputing to TTY
-    numberArgsToRemove=${1}
+    numberArgsToRemove=$1
     # Remove the number from the args
     shift 1
 fi
 
+ret=0
+
 # Run the command and pipe to less only if output is to TTY
 if [ -t 1 ]; then
-    #  Need to set this option so that we can get the retun status of the cmd
-    set -o pipefail
-
     # Run the command
-    ${@} | less -FRX
+    # Fundamentally the code below is just doing this...
+    #$@ | less -FRX
+
+    # This is a complicated way to run the command and capture the return code
+    # in a POSIX shell compatible manner
+    exec 3>&1
+    eval `
+        exec 4>&1 >&3 3>&-
+        {
+            $@ 4>&-; echo "cmdRet=$?;" >&4
+        }| less -FRX
+    `
+    exit $cmdRet
 else # Output is to non TTY...
     # Save the name of the command...
-    cmd=${1}
+    cmd=$1
     # ...and remove it from the args
     shift 1
 
     # Remove the args that are only for TTY output, they are expected to be the
     # first options after the command name.
-    shift ${numberArgsToRemove}
+    shift $numberArgsToRemove
 
     # Run the command with the remaing args
-    ${cmd} ${@}
-fi
+    $cmd $@
 
-exit ${?}
+    exit $?
+fi

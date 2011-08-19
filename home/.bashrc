@@ -402,20 +402,20 @@ alias df='df -h'
 alias du='du -h'
 
 # Misc :)
-alias less='less -FRX'                          # raw control characters
-alias more='LESS_IS_MORE=1 less'                # Use less in place of more
-alias whence='type -a'                          # where, of a sort
-alias grep='cmdless_color grep --color=always'  # show differences in color, page results
-alias find='cmdless find'                       # page results
-alias dmesg='cmdless dmesg'                     # page results
+alias less='less -FRX'                       # raw control characters
+alias more='LESS_IS_MORE=1 less'             # Use less in place of more
+alias whence='type -a'                       # where, of a sort
+alias grep='smartpage 1 grep --color=always' # show differences in color, page results
+alias find='smartpage find'                  # page results
+alias dmesg='smartpage dmesg'                # page results
 # Alias vim to vi if vim was found on the system
 if [ "${EDITOR}" = "vim" ]; then
     alias vi='vim'
 fi
 
 # Some shortcuts for different directory listings
-# Using colors and piped to less when output to TTY
-alias ls='cmdless_color 2 ls --color=always -w${COLUMNS} -hC --group-directories-first'
+# Using colors and page results when output to TTY
+alias ls='smartpage 2 ls --color=always -w${COLUMNS} -hC --group-directories-first'
 alias la='ls -A' # all but . and ..
 alias ll='ls -Al'  # all with long detailed list
 
