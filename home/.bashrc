@@ -37,17 +37,9 @@ fi
 if [ -n "$PS1" ]; then
 # Only run the rest in interactive mode
 
-# Environment Variables
-# #####################
-
-if [ "$(which dircolors 2>/dev/null)" ]; then
-    eval $(dircolors)
-fi
 
 # Shell Options
 # #############
-
-# See man bash for more options...
 
 # Don't wait for job termination notification
 set -o notify
@@ -59,13 +51,33 @@ shopt -s extglob
 # to exit with a non-zero status, or 0 if all commands exit sucessfully.
 set -o pipefail
 
-# When changing directory small typos can be ignored by bash
-# for example, cd /vr/lgo/apaache would find /var/log/apache
+# When changing directory small typos can be ignored by bash for example,
+# cd /vr/lgo/apaache would find /var/log/apache
 # shopt -s cdspell
 
-# check the window size after each command and, if necessary,
-# update the values of LINES and COLUMNS.
+# Check the window size after each command and, if necessary, update the values
+# of LINES and COLUMNS.
 shopt -s checkwinsize
+
+# Turn on bash programmable completion enhancements, if it has not already been
+# enabled, exists, and the shell is configured for it. Any completions you add
+# in ~/.bash_completion are sourced last.
+if [ -n "${INTERACTIVE_SHELL}" -a -z "${BASH_COMPLETION}" -a -f /etc/bash_completion ] && shopt -q progcomp; then
+    source /etc/bash_completion
+fi
+
+# Overwrite bash_completion functions so it doesn't expand ~
+if [ -n "${BASH_COMPLETION}" ]; then
+    function _expand()
+    {
+        return 0
+    }
+
+    function __expand_tilde_by_ref()
+    {
+        return 0
+    }
+fi
 
 
 # History Options
@@ -259,9 +271,13 @@ function cmd_log() {
 }
 
 function precmd () {
+    # Append the current command to the history file.
+    history -a
+
     # Get the latest command history
     history -c
     history -r
+
     local TERMWIDTH=${COLUMNS:=80} # Default to 80 chars wide if not set
 
     # Update variables that may have changed after executing the last command
@@ -338,8 +354,6 @@ function preexec () {
         preexec_screen_title "${cmdTitle}${titleSep}`preexec_screen_user_at_host`:${titlePWD}"
     fi
 
-    # Append the current command to the history file.
-    history -a
 
     # Reset text color to the terminal default for the command output
     echo -ne "${txtRst}" > $(tty)
@@ -367,57 +381,6 @@ PS1="${defaultColor}["\
 "${pwdColor}\${promptPWD}${defaultColor}"\
 "\${titlePromptBranch/!([:blank:])/|${branchColor}\${titlePromptBranch}${defaultColor}}"\
 "]\[\${promptColor}\]\\$ "
-
-
-# Aliases
-# #######
-
-# Some example alias instructions
-# If these are enabled they will be used instead of any instructions
-# they may mask.  For example, alias rm='rm -i' will mask the rm
-# application.  To override the alias instruction use a \ before, ie
-# \rm will call the real rm not the alias.
-
-# Make sudo an alias so other aliases get expanded and work in the sudo env
-alias sudo='sudo  '
-
-# Alias all of the executeables in the user's home bin to their full path so
-# that they will work in sudo
-if [ -d ${HOME}/bin ]; then
-    for f in ${HOME}/bin/*; do
-        if [ -x ${f} ]; then
-            alias ${f##*/}="${f}"
-        fi
-    done
-    unset f
-fi
-
-# Interactive operation...
-alias rm='rm -i'
-# alias cp='cp -i'
-# alias mv='mv -i'
-
-# Default to human readable figures
-alias df='df -h'
-alias du='du -h'
-
-# Misc :)
-alias less='less -FRX'                       # raw control characters
-alias more='LESS_IS_MORE=1 less'             # Use less in place of more
-alias whence='type -a'                       # where, of a sort
-alias grep='smartpage 1 grep --color=always' # show differences in color, page results
-alias find='smartpage find'                  # page results
-alias dmesg='smartpage dmesg'                # page results
-# Alias vim to vi if vim was found on the system
-if [ "${EDITOR}" = "vim" ]; then
-    alias vi='vim'
-fi
-
-# Some shortcuts for different directory listings
-# Using colors and page results when output to TTY
-alias ls='smartpage 2 ls --color=always -w${COLUMNS} -hC --group-directories-first'
-alias la='ls -A' # all but . and ..
-alias ll='ls -Al'  # all with long detailed list
 
 
 fi # closing if [ -n "$PS1" ]; then

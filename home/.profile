@@ -12,7 +12,7 @@
 # #########################
 
 # Set PATH so it includes user's private bin if it exists
-if [ -d "$HOME/bin" ] ; then
+if [ -d "$HOME/bin" ]; then
     PATH="$HOME/bin:$PATH"
 fi
 
@@ -65,9 +65,19 @@ export bakCyn='\e[46m'   # Cyan
 export bakWht='\e[47m'   # White
 export txtRst='\e[0m'    # Text Reset
 
+# Setup the file type and directory colors used by ls
+if [ -z "$LS_COLORS" ] && `type dircolors 2>/dev/null >&2`; then
+    # Check for a color settings in user's home directory
+    if [ -r ${HOME}/.dircolors ]; then
+        eval "`dircolors ${HOME}/.dircolors`"
+    else # Use the system default settings
+        eval "`dircolors`"
+    fi
+fi
+
 # Set env so less uses lesspipe for more friendly behavior when viewing non-text
 # input files, see lesspipe(1)
-if [ -x /usr/bin/lesspipe ]; then
+if [ -z "$LESSOPEN" -o -z "$LESSCLOSE" ] && `type lesspipe 2>/dev/null >&2`; then
     eval "`SHELL=/bin/sh lesspipe`"
 fi
 
