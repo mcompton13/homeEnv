@@ -6,10 +6,13 @@
 # mask. For example, alias rm='rm -i' will mask the rm application. To override
 # the alias use a \ before, ie \rm will call the real rm not the alias.
 
+# Enable use of SSH agent and X-Forwarding by default
+alias ssh='ssh -A -X'
+
 # Make sudo an alias so other aliases get expanded and work in the sudo env
 alias sudo='sudo  '
 
-# Alias all of the executeables in the user's home bin to their full path so
+# Alias all of the executables in the user's home bin to their full path so
 # that they will work in sudo
 if [ -d ${HOME}/bin ]; then
     for f in ${HOME}/bin/*; do
