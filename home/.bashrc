@@ -120,6 +120,24 @@ bind '"\e[B": history-search-forward'
 # Functions
 # #########
 
+# Adds up the values of all the characters of a string plus the length of the
+# string
+function calc_string_code {
+    local str="${1}"
+    local strCode=0
+    local i=0
+
+    while test -n "${str}" ; do
+        i=$(($i + 1))
+        char=${str:0:1}
+        charCode=$(printf '%d' "'${char}")
+        strCode=$(($strCode + ($i * $charCode)))
+        str=${str:1}
+    done
+
+    echo $(($strCode + 2 * $i))
+}
+
 # Returns a string representing the current working directory that is no
 # longer than $MAX_LEN characters.
 function parse_pwd {
@@ -284,35 +302,11 @@ function precmd () {
     promptPWD=$(parse_pwd "$(dirs +0)" $(( (${TERMWIDTH} - 20) / 2 )) ) # Length of PWD based on TERMWIDTH
     titlePWD=$(parse_pwd "${PWD}" $(( ${TERMWIDTH} - 45 )) ) # Length of PWD based on TERMWIDTH
     titlePromptBranch=$(parse_git_branch)$(parse_svn_branch)
-    titlePromptUser=""
-    promptColor=$(echo -e "${txtRst}")
-    promptUserColor=$(echo -e "${bldGrn}")
-    
-    titleHost=""
-    titleSep=" \xe2\x94\x80 "
-
-    local user=$(whoami)
-    # Only show the user if it's not my normal username 'mcompton'
-    if [ ! "${user}" = "mcompton" ]; then
-        if [ "${UID}" = "0" ]; then
-            promptColor=$(echo -e "${bldRed}")
-            promptUserColor=$(echo -e "${bldRed}")
-        fi
-        titlePromptUser=${user}
-        titleHost=${HOSTNAME%%.*}
-    fi
-
-    if [ -n "${REMOTE_SHELL}" ]; then
-        # Only show the hostname in the title if we're on a remote machine
-        titleHost=${HOSTNAME%%.*}
-        # Change the separator so it works on all remote machines
-        titleSep=" -- "
-    fi
 
     # Set the window title
-    if [[ ! "$TERM" == linux ]]; then
-        preexec_xterm_title "Terminal${titleSep}${titlePromptUser/!([:blank:])/${titlePromptUser}@}${titleHost/!([:blank:])/${titleHost}:}${titlePWD}"
-    fi
+#    if [[ ! "$TERM" == linux ]]; then
+#        preexec_xterm_title "Terminal${titleSep}${titlePromptUser/!([:blank:])/${titlePromptUser}@}${titleHost/!([:blank:])/${titleHost}:}${titlePWD}"
+#    fi
     if [[ "$TERM" == screen ]]; then
         preexec_screen_title "(`preexec_screen_user_at_host`) (${titlePWD})"
     fi
@@ -331,13 +325,13 @@ function preexec () {
             jobRegex="^\[[0-9]{1,3}\]\\${cmdArg}"
         fi
         # Use the name of the command from the jobs command
-        cmdTitle=$(jobs 2>/dev/null | grep -E "${jobRegex}" | sed -re "s/${jobRegex}[ ]+[A-Za-Z]+[^a-zA-Z0-9]+//g")
+#        cmdTitle=$(jobs 2>/dev/null | grep -E "${jobRegex}" | sed -re "s/${jobRegex}[ ]+[A-Za-Z]+[^a-zA-Z0-9]+//g")
     fi
 
     # Add the running command to the window title
-    if [[ ! "${TERM}" == "linux" ]]; then
-        preexec_xterm_title "${cmdTitle}${titleSep}${titlePromptUser/!([:blank:])/${titlePromptUser}@}${titleHost/!([:blank:])/${titleHost}:}${titlePWD}"
-    fi
+#    if [[ ! "${TERM}" == "linux" ]]; then
+#        preexec_xterm_title "${cmdTitle}${titleSep}${titlePromptUser/!([:blank:])/${titlePromptUser}@}${titleHost/!([:blank:])/${titleHost}:}${titlePWD}"
+#    fi
     if [[ "${TERM}" == "screen" ]]; then
         local cutit="$1"
         local cmdTitle=`echo "$cutit" | cut -d " " -f 1`
@@ -356,7 +350,7 @@ function preexec () {
 
 
     # Reset text color to the terminal default for the command output
-    echo -ne "${txtRst}" > $(tty)
+    echo -n "${txtRst}" > $(tty)
 }
 
 preexec_install
@@ -364,23 +358,50 @@ preexec_install
 # Bash Prompt
 #############
 
-# Colors used for the prompt
-defaultColor="\["${txtRst}"\]"
-if [ -n "${REMOTE_SHELL}" ]; then
-    hostColor="\["${bldPur}"\]"
-else
-    hostColor="\["${bldCyn}"\]"
+# Colors and info used for the prompt
+titlePromptUser=""
+promptColor="\[${txtRst}\]"
+promptUserColor="\[${bldGrn}\]"
+
+user=$(whoami)
+# Only show the user if it's not my normal username 'mcompton'
+if [ ! "${user}" = "mcompton" ]; then
+    if [ "${UID}" = "0" ]; then
+        promptColor="\[${bldRed}\]"
+        promptUserColor="\[${bldRed}\]"
+    fi
+    titlePromptUser=${user}
+    titleHost=${HOSTNAME%%.*}
 fi
-pwdColor="\["${bldBlu}"\]"
-branchColor="\["${bldPur}"\]"
+
+titleHost=""
+titleSep=" \xe2\x94\x80 "
+
+if [ -n "${REMOTE_SHELL}" ]; then
+    # Only show the hostname in the title if we're on a remote machine
+    titleHost=${HOSTNAME%%.*}
+    # Change the separator so it works on all remote machines
+    titleSep=" -- "
+fi
+
+defaultColor="\[${txtRst}\]"
+if [ -n "${REMOTE_SHELL}" ] && [[ ${numColors} -gt 2 ]]; then
+    hostNameCode=$(calc_string_code "${HOSTNAME}")
+    colorCode=$(($hostNameCode % $numColors))
+    hostColor="\[${undTxt}${bldTxt}$(tput setaf $colorCode)\]"
+else
+    hostColor="\[${bldCyn}\]"
+fi
+pwdColor="\[${bldBlu}\]"
+branchColor="\[${bldPur}\]"
 
 # Set the prompt
 PS1="${defaultColor}["\
-"\${titlePromptUser/!([:blank:])/\[\${promptUserColor}\]\${titlePromptUser}${defaultColor}@}"\
+"\${titlePromptUser/!([:blank:])/${promptUserColor}\${titlePromptUser}${defaultColor}@}"\
 "${hostColor}\h${defaultColor}:"\
 "${pwdColor}\${promptPWD}${defaultColor}"\
 "\${titlePromptBranch/!([:blank:])/|${branchColor}\${titlePromptBranch}${defaultColor}}"\
-"]\[\${promptColor}\]\\$ "
+"]${promptColor}\\$ "
 
 
 fi # closing if [ -n "$PS1" ]; then

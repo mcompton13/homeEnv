@@ -1,3 +1,4 @@
 *.sw[poq]
 */.*.sw[poq]
 */*/.*.sw[poq]
+.DS_Store

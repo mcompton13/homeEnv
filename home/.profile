@@ -4,6 +4,13 @@
 # see /usr/share/doc/bash/examples/startup-files for examples. The files are
 # located in the bash-doc package.
 
+# Detect which type of system
+
+UNAME=`uname`
+
+#TODO: Detect Linux vs. BSD
+export SYS='BSD'
+
 # the default umask is set in /etc/profile; for setting the umask
 # for ssh logins, install and configure the libpam-umask package.
 #umask 022
@@ -30,54 +37,63 @@ elif [ -n "`type vi 2>&-`" ]; then
     export EDITOR="vi"
 fi
 
+export numColors=2
 # Variables containing escape sequences for terminal colors
-export txtBlk='\e[0;30m' # Black - Regular
-export txtRed='\e[0;31m' # Red
-export txtGrn='\e[0;32m' # Green
-export txtYlw='\e[0;33m' # Yellow
-export txtBlu='\e[0;34m' # Blue
-export txtPur='\e[0;35m' # Purple
-export txtCyn='\e[0;36m' # Cyan
-export txtWht='\e[0;37m' # White
-export bldBlk='\e[1;30m' # Black - Bold
-export bldRed='\e[1;31m' # Red
-export bldGrn='\e[1;32m' # Green
-export bldYlw='\e[1;33m' # Yellow
-export bldBlu='\e[1;34m' # Blue
-export bldPur='\e[1;35m' # Purple
-export bldCyn='\e[1;36m' # Cyan
-export bldWht='\e[1;37m' # White
-export undBlk='\e[4;30m' # Black - Underline
-export undRed='\e[4;31m' # Red
-export undGrn='\e[4;32m' # Green
-export undYlw='\e[4;33m' # Yellow
-export undBlu='\e[4;34m' # Blue
-export undPur='\e[4;35m' # Purple
-export undCyn='\e[4;36m' # Cyan
-export undWht='\e[4;37m' # White
-export bakBlk='\e[40m'   # Black - Background
-export bakRed='\e[41m'   # Red
-export badGrn='\e[42m'   # Green
-export bakYlw='\e[43m'   # Yellow
-export bakBlu='\e[44m'   # Blue
-export bakPur='\e[45m'   # Purple
-export bakCyn='\e[46m'   # Cyan
-export bakWht='\e[47m'   # White
-export txtRst='\e[0m'    # Text Reset
+if [ -n "`type tput 2>&-`" ]; then
+    export numColors=`tput colors`
+    export bldTxt=`tput bold`
+    export undTxt=`tput smul`
+    export soutTxt=`tput smso`
+    export txtBlk=`tput setaf 0`  # Black - Regular
+    export txtRed=`tput setaf 1`  # Red
+    export txtGrn=`tput setaf 2`  # Green
+    export txtYlw=`tput setaf 3`  # Yellow
+    export txtBlu=`tput setaf 4`  # Blue
+    export txtPur=`tput setaf 5`  # Purple
+    export txtCyn=`tput setaf 6`  # Cyan
+    export txtWht=`tput setaf 7`  # White
+    export bldBlk=$bldTxt$txtBlk  # Black - Bold
+    export bldRed=$bldTxt$txtRed  # Red
+    export bldGrn=$bldTxt$txtGrn  # Green
+    export bldYlw=$bldTxt$txtYlw  # Yellow
+    export bldBlu=$bldTxt$txtBlu  # Blue
+    export bldPur=$bldTxt$txtPur  # Purple
+    export bldCyn=$bldTxt$txtCyn  # Cyan
+    export bldWht=$bldTxt$txtWht  # White
+    export undBlk=$undTxt$txtBlk  # Black - Underline
+    export undRed=$undTxt$txtRed  # Red
+    export undGrn=$undTxt$txtGrn  # Green
+    export undYlw=$undTxt$txtYlw  # Yellow
+    export undBlu=$undTxt$txtBlu  # Blue
+    export undPur=$undTxt$txtPur  # Purple
+    export undCyn=$undTxt$txtCyn  # Cyan
+    export undWht=$undTxt$txtWht  # White
+    export bakBlk=$soutTxt$txtBlk # Black - Background
+    export bakRed=$soutTxt$txtBlk # Red
+    export bakGrn=$soutTxt$txtBlk # Green
+    export bakYlw=$soutTxt$txtBlk # Yellow
+    export bakBlu=$soutTxt$txtBlk # Blue
+    export bakPur=$soutTxt$txtBlk # Purple
+    export bakCyn=$soutTxt$txtBlk # Cyan
+    export bakWht=$soutTxt$txtBlk # White
+    export txtRst=`tput sgr0`     # Text Reset
+fi
 
 # Setup the file type and directory colors used by ls
-if [ -z "$LS_COLORS" ] && `type dircolors 2>/dev/null >&2`; then
-    # Check for a color settings in user's home directory
-    if [ -r ${HOME}/.dircolors ]; then
-        eval "`dircolors ${HOME}/.dircolors`"
-    else # Use the system default settings
-        eval "`dircolors`"
+    if [ "$SYS" = "LINUX" ] && [ -z "$LS_COLORS" ] && `type dircolors 2>/dev/null >&2`; then
+        # Check for a color settings in user's home directory
+        if [ -r ${HOME}/.dircolors ]; then
+            eval "`dircolors ${HOME}/.dircolors`"
+        else # Use the system default settings
+            eval "`dircolors`"
+        fi
+    elif [ "$SYS" = "BSD" ] && [ -z "$LSCOLORS" ]; then
+        export LSCOLORS=ExGxFxdaCxDaDahBaDaCEC
     fi
-fi
 
 # Set env so less uses lesspipe for more friendly behavior when viewing non-text
 # input files, see lesspipe(1)
-if [ -z "$LESSOPEN" -o -z "$LESSCLOSE" ] && `type lesspipe 2>/dev/null >&2`; then
-    eval "`SHELL=/bin/sh lesspipe`"
-fi
+    if [ -z "$LESSOPEN" -o -z "$LESSCLOSE" ] && `type lesspipe 2>/dev/null >&2`; then
+        eval "`SHELL=/bin/sh lesspipe`"
+    fi
 
