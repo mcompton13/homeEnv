@@ -89,6 +89,7 @@ fi
         fi
     elif [ "$SYS" = "BSD" ] && [ -z "$LSCOLORS" ]; then
         export LSCOLORS=ExGxFxdaCxDaDahBaDaCEC
+        export LS_COLORS="di=01;34:fi=0:ln=01;36:pi=33;40:so=33;40:bd=33;40:cd=33;40:mi=0:ex=01;32:*.rpm=90"
     fi
 
 # Set env so less uses lesspipe for more friendly behavior when viewing non-text
