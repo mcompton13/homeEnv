@@ -6,6 +6,10 @@
 # mask. For example, alias rm='rm -i' will mask the rm application. To override
 # the alias use a \ before, ie \rm will call the real rm not the alias.
 
+# NOTE: SHOULD USE ~/.ssh/config INSTEAD, SEE http://linux.die.net/man/5/ssh_config
+# Enable use of SSH agent and X-Forwarding by default
+#alias ssh='ssh -A -X'
+
 # Make sudo an alias so other aliases get expanded and work in the sudo env
 alias sudo='sudo  '
 
@@ -40,6 +44,8 @@ alias dmesg='smartpage dmesg'                # page results
 if [ "${EDITOR}" = "vim" ]; then
     alias vi='vim'
 fi
+
+alias tree='smartpage 1 tree -C'
 
 # Some shortcuts for different directory listings
 # Using colors and page results when output to TTY
