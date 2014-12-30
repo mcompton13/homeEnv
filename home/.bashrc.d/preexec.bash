@@ -140,12 +140,12 @@ function preexec_install () {
 # Change the title of the xterm.
 function preexec_xterm_title () {
     local title="$1"
-    echo -ne "\e]0;$title\007"
+    echo -ne "\033]0;$title\007"
 }
 
 function preexec_screen_title () {
     local title="$1"
-    echo -ne "\ek$1\e\\"
+    echo -ne "\ek$title\e\\"
     #echo -ne "\e]2;$@\a\e]1;$@\a"
 }
 
