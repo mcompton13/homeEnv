@@ -64,6 +64,8 @@ shopt -s checkwinsize
 # in ~/.bash_completion are sourced last.
 if [ -n "${INTERACTIVE_SHELL}" -a -z "${BASH_COMPLETION}" -a -f /etc/bash_completion ] && shopt -q progcomp; then
     source /etc/bash_completion
+elif [ -n "${INTERACTIVE_SHELL}" -a -z "${BASH_COMPLETION}" -a -f /usr/local/etc/bash_completion ] && shopt -q progcomp; then
+    source /usr/local/etc/bash_completion
 fi
 
 # Overwrite bash_completion functions so it doesn't expand ~
@@ -84,21 +86,16 @@ fi
 # ###############
 
 # Keep a reasonable amount of history in memory.
-export HISTSIZE=1000 
+export HISTSIZE=10000
 
 # Large history file to hold lots of history.
-export HISTFILESIZE=40960 
-
-# Erase duplicate lines in the history.
-export HISTCONTROL=erasedups:ignoredups
+export HISTFILESIZE=400000
 
 # Store time in history file and display it for history command with this format
 export HISTTIMEFORMAT=$(echo -e "%Y/%m/%d(${txtYlw}%H:%M:%S${txtRst}) ")
 
-#export HISTFILE="${HOME}/.bash_history.test"
-
 # Make bash append rather than overwrite the history on disk
-#shopt -s histappend
+shopt -s histappend
 
 # Ignore some controlling instructions
 # HISTIGNORE is a colon-delimited list of patterns which should be excluded.
@@ -115,6 +112,129 @@ bind '"\e[B": history-search-forward'
 # Use PgUp and PgDn to Search through command history
 #bind '"M-\e[6~": history-search-forward'
 #bind '"M-\e[5~": history-search-backward'
+
+
+HISTFILESIZE=$((${HISTSIZE} * 2))
+HISTCOPYSIZE=$((${HISTSIZE} - 50))
+
+#history() {
+  #time _bash_history_sync
+  #_bash_history_sync3
+  #builtin history "$@"
+#}
+
+_bash_history_sync() {
+    local lineCount=$(wc -l < ${HOME}/.bash_history)
+
+    # Save the new history entries to the history file
+    builtin history -a
+    HISTFILESIZE=$HISTSIZE
+
+    local newLineCount=$(wc -l < ${HOME}/.bash_history)
+    newLineCount=$((${newLineCount} - ${lineCount}))
+
+    echo "NewCount: ${newLineCount}"
+
+    if [[ ${newLineCount} -gt 0 ]]; then
+        # Get the new lines, drop the ending newline.
+        local newLine=$(echo -n "$(tail -n${newLineCount} ${HOME}/.bash_history)")
+
+        # Use grep to remove any previous entry of this command from .bash_history.all
+        # and add it back to the very end of the file, saving the results in a tmp file.
+        (\grep -F -x -v "${newLine}" ${HOME}/.bash_history.all && echo ${newLine}) > ${HOME}/.bash_history.all.tmp
+        # Replace .bash_history.all with the temp file version
+        mv ${HOME}/.bash_history.all.tmp ${HOME}/.bash_history.all
+
+        # Now use ed to replace the contents of the actual .bash_history file with the
+        # end of the .bash_history.all file.
+ed -s ${HOME}/.bash_history <<EOF
+1,\$d
+0r !tail -n${HISTCOPYSIZE} ${HOME}/.bash_history.all
+w
+EOF
+
+    fi
+
+    # Clear...
+    builtin history -c
+    # ...and reload the history from the .bash_history file
+    builtin history -r
+}
+
+
+_bash_history_sync2() {
+    local lineCount=$(wc -l < ${HOME}/.bash_history)
+
+    # Save the new history entries to the history file
+    builtin history -a
+    HISTFILESIZE=$HISTSIZE
+
+    local newLineCount=$(wc -l < ${HOME}/.bash_history)
+    newLineCount=$((${newLineCount} - ${lineCount}))
+
+    echo "NewCount: ${newLineCount}"
+
+    if [[ ${newLineCount} -gt 0 ]]; then
+        # Get the new lines and append it to the full history file
+        local newLine=$(echo "$(tail -n${newLineCount} ${HOME}/.bash_history)" | tee -a ${HOME}/.bash_history.all)
+        # Version with the following regex symbols escaped: -].[^$*~/\
+        local escapedNewLine=$(echo "${newLine}" | sed -E 's!([-]|[].[^$*~/\])!\\\1!g')
+
+        # Now use ed to remove any previous reference to the command and add it to
+        # end of the .bash_history file.
+ed -s ${HOME}/.bash_history <<EOF
+\$ke
+\$a
+${newLine}
+.
+1,'eg/^${escapedNewLine}$/d
+w
+EOF
+
+    fi
+
+    # Clear...
+    builtin history -c
+    # ...and reload the history from the .bash_history file
+    builtin history -r
+}
+
+_bash_history_sync3() {
+    local lineCount=$(wc -l < ${HOME}/.bash_history)
+
+    # Save the new history entries to the history file
+    builtin history -a
+
+    local newLineCount=$(wc -l < ${HOME}/.bash_history)
+    newLineCount=$((${newLineCount} - ${lineCount}))
+
+    #echo "LineCount: ${lineCount} NewCount: ${newLineCount}"
+
+    if [[ ${newLineCount} -gt 0 ]]; then
+        # Get the new lines and append it to the full history file
+        local newLine=$(echo "$(tail -n${newLineCount} ${HOME}/.bash_history)" | tee -a ${HOME}/.bash_history.all)
+        # Version with the the timestamp striped and the following regex symbols escaped: -].[^$*~/\
+        local escapedNewLine=$(echo "${newLine}" | tail -n+2 | sed -E 's!([-]|[].[^$*~/\])!\\\1!g')
+
+        # Now use ed to remove any previous reference to the command and add it to
+        # end of the .bash_history file.
+ed -s ${HOME}/.bash_history <<EOF
+\$ke
+\$a
+${newLine}
+.
+1,'eg/^${escapedNewLine}$/^,.d
+w
+EOF
+
+    fi
+
+    # Clear...
+    builtin history -c
+    # ...and reload the history from the .bash_history file
+    builtin history -r
+
+}
 
 
 # Functions
@@ -173,17 +293,25 @@ function parse_pwd {
 # git project directory.
 if [ "$(git --version 2>/dev/null)" ]; then
     function parse_git_branch {
-        local gitDir=$(git rev-parse --show-toplevel 2> /dev/null) || return
-        # Don't show git info for a git project in the home dir
-        if [[ "${gitDir}" == "${HOME}" ]]; then
-            return
-        fi
-        local ref=$(git symbolic-ref HEAD 2> /dev/null) || return
-        echo ${ref#refs/heads/}
+        ref=$(git symbolic-ref HEAD 2> /dev/null) || return 1
+        echo -n ${ref#refs/heads/}
     }
 else
     function parse_git_branch {
-        return
+        return 1
+    }
+fi
+
+# Returns a string containing the name of the current hg branch if in a
+# hg project directory.
+if [ "$(hg --version 2>&-)" ]; then
+    function parse_hg_branch {
+        branch=$(hg identify -b 2>&-) || return 1
+        echo -n ${branch}
+    }
+else
+    function parse_hg_branch {
+        return 1
     }
 fi
 
@@ -191,13 +319,13 @@ fi
 # svn project directory.
 if [ "$(svn --version 2>/dev/null)" ]; then
     function parse_svn_branch {
-        if [ ! -d ".svn" ]; then return; fi
-        info=$(svn info 2>/dev/null) || return
-        echo "$(echo "${info}" | sed -ne 's#^URL: .*/\([^/]*/\(\(trunk\)\|\(branches\|tags\)/\([^/]*\)\)\)/\?.*#\3\5#p ')"
+        if [ ! -d ".svn" ]; then return 1; fi
+        info=$(svn info 2>/dev/null) || return 1
+        echo -n "$(echo -n "${info}" | sed -ne 's#^URL: .*/\([^/]*/\(\(trunk\)\|\(branches\|tags\)/\([^/]*\)\)\)/\?.*#\3\5#p ')"
     }
 else
     function parse_svn_branch {
-        return
+        return 1
     }
 fi
 
@@ -289,24 +417,19 @@ function cmd_log() {
 }
 
 function precmd () {
-    # Append the current command to the history file.
-    history -a
-
-    # Get the latest command history
-    history -c
-    history -r
+    _bash_history_sync3
 
     local TERMWIDTH=${COLUMNS:=80} # Default to 80 chars wide if not set
 
     # Update variables that may have changed after executing the last command
     promptPWD=$(parse_pwd "$(dirs +0)" $(( (${TERMWIDTH} - 20) / 2 )) ) # Length of PWD based on TERMWIDTH
     titlePWD=$(parse_pwd "${PWD}" $(( ${TERMWIDTH} - 45 )) ) # Length of PWD based on TERMWIDTH
-    titlePromptBranch=$(parse_git_branch)$(parse_svn_branch)
+    titlePromptBranch=$(parse_hg_branch || parse_git_branch || parse_svn_branch)
 
     # Set the window title
-#    if [[ ! "$TERM" == linux ]]; then
-#        preexec_xterm_title "Terminal${titleSep}${titlePromptUser/!([:blank:])/${titlePromptUser}@}${titleHost/!([:blank:])/${titleHost}:}${titlePWD}"
-#    fi
+    if [[ ! "$TERM" == linux ]]; then
+        preexec_xterm_title "Terminal${titleSep}${titlePromptUser/!([:blank:])/${titlePromptUser}@}${titleHost/!([:blank:])/${titleHost}:}${titlePWD}"
+    fi
     if [[ "$TERM" == screen ]]; then
         preexec_screen_title "(`preexec_screen_user_at_host`) (${titlePWD})"
     fi
@@ -320,18 +443,18 @@ function preexec () {
         local cmdArr=(${cmdTitle// / })
         # Only take the first arg to fg, default arg to + if none was specified
         cmdArg=${cmdArr[1]:-"+"}
-        local jobRegex="^\[${cmdArg}\][+-]?"
+        local jobRegex="^\[${cmdArg}\][+-]\{0,1\}"
         if [[ "${cmdArg}" == "+" ]] || [[ "${cmdArg}" == "-" ]]; then
-            jobRegex="^\[[0-9]{1,3}\]\\${cmdArg}"
+            jobRegex="^\[[0-9]\{1,3\}\]${cmdArg}"
         fi
         # Use the name of the command from the jobs command
-#        cmdTitle=$(jobs 2>/dev/null | grep -E "${jobRegex}" | sed -re "s/${jobRegex}[ ]+[A-Za-Z]+[^a-zA-Z0-9]+//g")
+        cmdTitle=$(jobs 2>&- | grep "${jobRegex}" | sed -e "s/${jobRegex}[ ][ ]*[[:alpha:]][[:alpha:]]*[^[:alpha:]][^[:alpha:]]*//g")
     fi
 
     # Add the running command to the window title
-#    if [[ ! "${TERM}" == "linux" ]]; then
-#        preexec_xterm_title "${cmdTitle}${titleSep}${titlePromptUser/!([:blank:])/${titlePromptUser}@}${titleHost/!([:blank:])/${titleHost}:}${titlePWD}"
-#    fi
+    if [[ ! "${TERM}" == "linux" ]]; then
+        preexec_xterm_title "${cmdTitle}${titleSep}${titlePromptUser/!([:blank:])/${titlePromptUser}@}${titleHost/!([:blank:])/${titleHost}:}${titlePWD}"
+    fi
     if [[ "${TERM}" == "screen" ]]; then
         local cutit="$1"
         local cmdTitle=`echo "$cutit" | cut -d " " -f 1`
@@ -375,7 +498,7 @@ if [ ! "${user}" = "mcompton" ]; then
 fi
 
 titleHost=""
-titleSep=" \xe2\x94\x80 "
+titleSep=" \xe2\x80\x94 "
 
 if [ -n "${REMOTE_SHELL}" ]; then
     # Only show the hostname in the title if we're on a remote machine
