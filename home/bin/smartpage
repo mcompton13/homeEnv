@@ -5,7 +5,7 @@ numberArgsToRemove=0;
 
 # If the first option is a number...
 if [ ! -z "${1##*[!0-9]*}" ]; then
-    # ...it is specifying the number of args to remove when not outputing to TTY
+    # ...it is specifying the number of args to remove when not outputting to TTY
     numberArgsToRemove=$1
     # Remove the number from the args
     shift 1
@@ -39,7 +39,7 @@ else # Output is to non TTY...
     # first options after the command name.
     shift $numberArgsToRemove
 
-    # Run the command with the remaing args
+    # Run the command with the remaining args
     $cmd "$@"
 
     exit $?

@@ -50,7 +50,7 @@ alias tree='smartpage 1 tree -C'
 # Some shortcuts for different directory listings
 # Using colors and page results when output to TTY
 if [ "${SYS}" = "BSD" ]; then
-    alias ls="CLICOLOR_FORCE=1 smartpage 1 ls -GC -h"
+    alias ls='COLUMNS=$(tput cols) CLICOLOR_FORCE=1 smartpage 1 ls -GC -h'
 elif [ "${SYS}" = "LINUX" ]; then
     alias ls='smartpage 2 ls --color=always -w${COLUMNS} -hC --group-directories-first'
 fi

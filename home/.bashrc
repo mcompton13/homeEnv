@@ -85,6 +85,12 @@ fi
 # History Options
 # ###############
 
+# Location of the history file
+export HISTFILE="${HOME}/.bash_history"
+
+# Location of the ALL history file (all commands from all time, no duplicates removed)
+export HISTALLFILE="${HOME}/.bash_history.all"
+
 # Keep a reasonable amount of history in memory.
 export HISTSIZE=10000
 
@@ -117,108 +123,36 @@ bind '"\e[B": history-search-forward'
 HISTFILESIZE=$((${HISTSIZE} * 2))
 HISTCOPYSIZE=$((${HISTSIZE} - 50))
 
-#history() {
-  #time _bash_history_sync
-  #_bash_history_sync3
-  #builtin history "$@"
-#}
+# Duplicates history to /dev/null so the HISTALLFILE doesn't get a bunch of
+# duplicate entries when running history command below
+alias history='_bash_history_sync3 /dev/null; builtin history'
+alias history_all="(builtin history -c && HISTFILE=${HISTALLFILE} builtin history -r && builtin history)"
 
-_bash_history_sync() {
-    local lineCount=$(wc -l < ${HOME}/.bash_history)
-
-    # Save the new history entries to the history file
-    builtin history -a
-    HISTFILESIZE=$HISTSIZE
-
-    local newLineCount=$(wc -l < ${HOME}/.bash_history)
-    newLineCount=$((${newLineCount} - ${lineCount}))
-
-    echo "NewCount: ${newLineCount}"
-
-    if [[ ${newLineCount} -gt 0 ]]; then
-        # Get the new lines, drop the ending newline.
-        local newLine=$(echo -n "$(tail -n${newLineCount} ${HOME}/.bash_history)")
-
-        # Use grep to remove any previous entry of this command from .bash_history.all
-        # and add it back to the very end of the file, saving the results in a tmp file.
-        (\grep -F -x -v "${newLine}" ${HOME}/.bash_history.all && echo ${newLine}) > ${HOME}/.bash_history.all.tmp
-        # Replace .bash_history.all with the temp file version
-        mv ${HOME}/.bash_history.all.tmp ${HOME}/.bash_history.all
-
-        # Now use ed to replace the contents of the actual .bash_history file with the
-        # end of the .bash_history.all file.
-ed -s ${HOME}/.bash_history <<EOF
-1,\$d
-0r !tail -n${HISTCOPYSIZE} ${HOME}/.bash_history.all
-w
-EOF
-
+function _bash_history_sync3() {
+    local historyAllFile="${HISTALLFILE}"
+    if [ -w "${1}" ]; then
+        historyAllFile=${1}
     fi
 
-    # Clear...
-    builtin history -c
-    # ...and reload the history from the .bash_history file
-    builtin history -r
-}
-
-
-_bash_history_sync2() {
-    local lineCount=$(wc -l < ${HOME}/.bash_history)
+    local lineCount=$(wc -l < ${HISTFILE})
 
     # Save the new history entries to the history file
     builtin history -a
-    HISTFILESIZE=$HISTSIZE
 
-    local newLineCount=$(wc -l < ${HOME}/.bash_history)
+    local newLineCount=$(wc -l < ${HISTFILE})
     newLineCount=$((${newLineCount} - ${lineCount}))
 
-    echo "NewCount: ${newLineCount}"
+    #echo "historyAllFile: ${historyAllFile} LineCount: ${lineCount} NewCount: ${newLineCount}"
 
     if [[ ${newLineCount} -gt 0 ]]; then
         # Get the new lines and append it to the full history file
-        local newLine=$(echo "$(tail -n${newLineCount} ${HOME}/.bash_history)" | tee -a ${HOME}/.bash_history.all)
-        # Version with the following regex symbols escaped: -].[^$*~/\
-        local escapedNewLine=$(echo "${newLine}" | sed -E 's!([-]|[].[^$*~/\])!\\\1!g')
-
-        # Now use ed to remove any previous reference to the command and add it to
-        # end of the .bash_history file.
-ed -s ${HOME}/.bash_history <<EOF
-\$ke
-\$a
-${newLine}
-.
-1,'eg/^${escapedNewLine}$/d
-w
-EOF
-
-    fi
-
-    # Clear...
-    builtin history -c
-    # ...and reload the history from the .bash_history file
-    builtin history -r
-}
-
-_bash_history_sync3() {
-    local lineCount=$(wc -l < ${HOME}/.bash_history)
-
-    # Save the new history entries to the history file
-    builtin history -a
-
-    local newLineCount=$(wc -l < ${HOME}/.bash_history)
-    newLineCount=$((${newLineCount} - ${lineCount}))
-
-    #echo "LineCount: ${lineCount} NewCount: ${newLineCount}"
-
-    if [[ ${newLineCount} -gt 0 ]]; then
-        # Get the new lines and append it to the full history file
-        local newLine=$(echo "$(tail -n${newLineCount} ${HOME}/.bash_history)" | tee -a ${HOME}/.bash_history.all)
+        local newLine=$(echo "$(tail -n${newLineCount} ${HISTFILE})" | tee -a ${historyAllFile})
         # Version with the the timestamp striped and the following regex symbols escaped: -].[^$*~/\
         local escapedNewLine=$(echo "${newLine}" | tail -n+2 | sed -E 's!([-]|[].[^$*~/\])!\\\1!g')
 
         # Now use ed to remove any previous reference to the command and add it to
         # end of the .bash_history file.
-ed -s ${HOME}/.bash_history <<EOF
+ed -s ${HISTFILE} <<EOF
 \$ke
 \$a
 ${newLine}
@@ -231,9 +165,8 @@ EOF
 
     # Clear...
     builtin history -c
-    # ...and reload the history from the .bash_history file
+    # ...and reload the rewritten history from the .bash_history file
     builtin history -r
-
 }
 
 
