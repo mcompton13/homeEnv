@@ -120,34 +120,49 @@ function backupLn {
 }
 
 
-find . -type d | while read d; do
-   destDir=${DEST_DIR_BASE}${d#.}
-   echo "Creating '${destDir}'"
-   mkdir -p "${destDir}"
-done
+find . -type d -exec bash -c '
+   d="$0"
+   destDir='${DEST_DIR_BASE}'${d#.}
+   echo "Directory  ${d}"
+   echo "Creating ${destDir}"
+   #mkdir -p "${destDir}"
+' {} ';'
+
+
+export -f relativePath
+export -f getLinkAbsoluteFilename
+export -f backupFile
+export -f backupLn
 
 # Get list of all the files, ignoring VIM's temp files .swp, .swo, and .swn
-installFiles=$(find . -type f -a ! -name ".*.sw[pon]")
-for f in ${installFiles}; do
+find . -type f -a ! -name ".*.sw[pon]" -exec bash -c '
+    f="$0"
     filename="${f##*/}"
     filePathname="${f#.}"
-    fromFilename="${HOME_ENV_ROOT}${filePathname}"
-    toFilename="${DEST_DIR_BASE}${filePathname}"
+    fromFilename="'${HOME_ENV_ROOT}'${filePathname}"
+    toFilename="'${DEST_DIR_BASE}'${filePathname}"
+
+#    echo "******* filename=${filename}"
+#    echo "******* filePathname=${filePathname}"
+#    echo "******* fromFilename=${fromFilename}"
+#    echo "******* toFilename=${toFilename}"
+
     # Check to see if the destination is already a link to the correct file
-    if [ -h ${toFilename} ] && [ "$(getLinkAbsoluteFilename ${toFilename})" = "${fromFilename}" ]; then
+    if [ -h "${toFilename}" ] && [ "$(getLinkAbsoluteFilename ${toFilename})" = "${fromFilename}" ]; then
         # Already linked to the correct file, skip
-        echo "File '${toFilename}' already linked, skipping"
+        echo "File ${toFilename} already linked, skipping"
     else
         # Need to make the link
         toFileDir="${toFilename%/*}"
         fromFilenameRel=$(relativePath "${toFileDir}" "${fromFilename}")
         pushd "${toFileDir}" >&-
-        echo "Linking '${fromFilenameRel}' to '${toFilename}' in '$(pwd)'"
+        echo "Linking ${fromFilenameRel} to ${toFilename} in $(pwd)"
         backupLn "${fromFilenameRel}" "${toFilename}"
         popd >&-
     fi
-done
+' {} ';'
 
 popd >&-
 popd >&-
+
 
