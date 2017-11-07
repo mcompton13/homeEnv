@@ -123,9 +123,8 @@ function backupLn {
 find . -type d -exec bash -c '
    d="$0"
    destDir='${DEST_DIR_BASE}'${d#.}
-   echo "Directory  ${d}"
    echo "Creating ${destDir}"
-   #mkdir -p "${destDir}"
+   mkdir -p "${destDir}"
 ' {} ';'
 
 
