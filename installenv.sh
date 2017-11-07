@@ -162,6 +162,19 @@ find . -type f -a ! -name ".*.sw[pon]" -exec bash -c '
     fi
 ' {} ';'
 
+HISTFILE="${HOME}/.bash_history"
+HISTALLFILE="${HOME}/.bash_history.all"
+
+if [[ ! -f "${HISTFILE}" ]]; then
+    echo "Creating ${HISTFILE}"
+    printf "#0000000000\n \n" > ${HISTFILE}
+fi
+
+if [[ ! -f "${HISTALLFILE}" ]]; then
+    echo "Creating ${HISTALLFILE}"
+    printf "#0000000000\n \n" > ${HISTALLFILE}
+fi
+
 popd >&-
 popd >&-
 
