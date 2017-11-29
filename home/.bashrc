@@ -92,7 +92,7 @@ export HISTFILE="${HOME}/.bash_history"
 export HISTALLFILE="${HOME}/.bash_history.all"
 
 # Keep a reasonable amount of history in memory.
-export HISTSIZE=10000
+export HISTSIZE=90000
 
 # Large history file to hold lots of history.
 export HISTFILESIZE=400000
@@ -113,8 +113,8 @@ bind '"\e[A": history-search-backward'
 bind '"\e[B": history-search-forward'
 
 # Use PgUp and PgDn to rerun the previous command through sudo
-#bind '"\e[5~": "\C-p\C-asudo \n"'
-#bind '"\e[6~": "\C-p\C-asudo \n"'
+bind '"\e[5~": "\C-p\C-asudo \C-e"'
+bind '"\e[6~": "\C-p\C-asudo \C-e"'
 # Use PgUp and PgDn to Search through command history
 #bind '"M-\e[6~": history-search-forward'
 #bind '"M-\e[5~": history-search-backward'
@@ -226,8 +226,12 @@ function parse_pwd {
 # git project directory.
 if [ "$(git --version 2>/dev/null)" ]; then
     function parse_git_branch {
+        local w="";
+        local i="";
         ref=$(git symbolic-ref HEAD 2> /dev/null) || return 1
-        echo -n ${ref#refs/heads/}
+        git diff --no-ext-diff --quiet || w="*";
+        git diff --no-ext-diff --cached --quiet || i="+";
+        echo -n ${ref#refs/heads/}${w}${i}
     }
 else
     function parse_git_branch {
