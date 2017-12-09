@@ -21,6 +21,20 @@ if [[ ! -d ${HOME_ENV_ROOT} ]]; then
     exit
 fi
 
+# Get OS info from uname in ALL CAPS
+UNAME="$(tr '[:lower:]' '[:upper:]' <<< $(uname -s))"
+
+if [ "${UNAME}" == "DARWIN" ]; then
+    OS_TYPE="bsd"
+    OS_NAME="darwin"
+elif [ "${UNAME}" == "LINUX" ]; then
+    OS_TYPE="linux"
+    OS_NAME="ubuntu"
+fi
+
+
+echo "Detected OS Type=${OS_TYPE} and Name=${OS_NAME}"
+
 # From http://stackoverflow.com/questions/2564634/bash-convert-absolute-path-into-relative-path-given-a-current-directory
 # Calculates the relative path for inputs that are absolute paths or relative
 # paths without . or ..
@@ -121,6 +135,11 @@ function installFiles {
     local homeEnvRoot=("${1}")
     local destDirBase=("${2}")
 
+    if [[ ! -d ${homeEnvRoot} ]]; then
+        echo "Skipping install files from ${homeEnvRoot}, directory does not exist"
+        return
+    fi
+
     echo "Installing from '${homeEnvRoot}' to '${destDirBase}'"
     pushd ${homeEnvRoot} >&-
 
@@ -164,9 +183,15 @@ function installFiles {
             popd >&-
         fi
     ' {} ';'
+
+    popd >&-
 }
 
 installFiles "${HOME_ENV_ROOT}" "${DEST_DIR_BASE}"
+
+installFiles "${HOME_ENV_ROOT}-${OS_TYPE}" "${DEST_DIR_BASE}"
+
+installFiles "${HOME_ENV_ROOT}-${OS_NAME}" "${DEST_DIR_BASE}"
 
 HISTFILE="${DEST_DIR_BASE}/.bash_history"
 HISTALLFILE="${DEST_DIR_BASE}/.bash_history.all"
@@ -183,7 +208,6 @@ fi
 
 touch "${DEST_DIR_BASE}/.gitconfig-work"
 
-popd >&-
 popd >&-
 
 
