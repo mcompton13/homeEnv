@@ -1,3 +1,5 @@
+# These are git settings that apply to all systems, if you have specific settings for a machine (like setting a work
+# name and email address you should modify the included ~/.gitconfig-local instead.
 [color]
 	ui = auto
 [color "branch"]
@@ -23,5 +25,6 @@
 [bash]
     showDirtyState = true
     showUntrackedFiles = true
+# Include settings for this particular computer
 [include]
-    path = ~/.gitconfig-work
+    path = ~/.gitconfig-local

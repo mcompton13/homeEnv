@@ -187,10 +187,13 @@ function installFiles {
     popd >&-
 }
 
+# Install files common to all OS envs
 installFiles "${HOME_ENV_ROOT}" "${DEST_DIR_BASE}"
 
+# Install files common to the specific OS type
 installFiles "${HOME_ENV_ROOT}-${OS_TYPE}" "${DEST_DIR_BASE}"
 
+# Install files for the specific OS name
 installFiles "${HOME_ENV_ROOT}-${OS_NAME}" "${DEST_DIR_BASE}"
 
 HISTFILE="${DEST_DIR_BASE}/.bash_history"
@@ -206,8 +209,7 @@ if [[ ! -f "${HISTALLFILE}" ]]; then
     printf "#0000000000\n \n" > ${HISTALLFILE}
 fi
 
-touch "${DEST_DIR_BASE}/.gitconfig-work"
+echo "Touching ${DEST_DIR_BASE}/.gitconfig-local"
+touch "${DEST_DIR_BASE}/.gitconfig-local"
 
 popd >&-
-
-
