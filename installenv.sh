@@ -21,9 +21,6 @@ if [[ ! -d ${HOME_ENV_ROOT} ]]; then
     exit
 fi
 
-echo "Installing from '${HOME_ENV_ROOT}' to '${DEST_DIR_BASE}'"
-pushd ${HOME_ENV_ROOT} >&-
-
 # From http://stackoverflow.com/questions/2564634/bash-convert-absolute-path-into-relative-path-given-a-current-directory
 # Calculates the relative path for inputs that are absolute paths or relative
 # paths without . or ..
@@ -120,49 +117,59 @@ function backupLn {
 }
 
 
-find . -type d -exec bash -c '
-   d="$0"
-   destDir='${DEST_DIR_BASE}'${d#.}
-   echo "Creating ${destDir}"
-   mkdir -p "${destDir}"
-' {} ';'
+function installFiles {
+    local homeEnvRoot=("${1}")
+    local destDirBase=("${2}")
+
+    echo "Installing from '${homeEnvRoot}' to '${destDirBase}'"
+    pushd ${homeEnvRoot} >&-
+
+    find . -type d -exec bash -c '
+       d="$0"
+       destDir='${destDirBase}'${d#.}
+       echo "Creating ${destDir}"
+       mkdir -p "${destDir}"
+    ' {} ';'
 
 
-export -f relativePath
-export -f getLinkAbsoluteFilename
-export -f backupFile
-export -f backupLn
+    export -f relativePath
+    export -f getLinkAbsoluteFilename
+    export -f backupFile
+    export -f backupLn
 
-# Get list of all the files, ignoring VIM's temp files .swp, .swo, and .swn
-find . -type f -a ! -name ".*.sw[pon]" -exec bash -c '
-    f="$0"
-    filename="${f##*/}"
-    filePathname="${f#.}"
-    fromFilename="'${HOME_ENV_ROOT}'${filePathname}"
-    toFilename="'${DEST_DIR_BASE}'${filePathname}"
+    # Get list of all the files, ignoring VIM's temp files .swp, .swo, and .swn
+    find . -type f -a ! -name ".*.sw[pon]" -exec bash -c '
+        f="$0"
+        filename="${f##*/}"
+        filePathname="${f#.}"
+        fromFilename="'${homeEnvRoot}'${filePathname}"
+        toFilename="'${destDirBase}'${filePathname}"
 
-#    echo "******* filename=${filename}"
-#    echo "******* filePathname=${filePathname}"
-#    echo "******* fromFilename=${fromFilename}"
-#    echo "******* toFilename=${toFilename}"
+    #    echo "******* filename=${filename}"
+    #    echo "******* filePathname=${filePathname}"
+    #    echo "******* fromFilename=${fromFilename}"
+    #    echo "******* toFilename=${toFilename}"
 
-    # Check to see if the destination is already a link to the correct file
-    if [ -h "${toFilename}" ] && [ "$(getLinkAbsoluteFilename ${toFilename})" = "${fromFilename}" ]; then
-        # Already linked to the correct file, skip
-        echo "File ${toFilename} already linked, skipping"
-    else
-        # Need to make the link
-        toFileDir="${toFilename%/*}"
-        fromFilenameRel=$(relativePath "${toFileDir}" "${fromFilename}")
-        pushd "${toFileDir}" >&-
-        echo "Linking ${fromFilenameRel} to ${toFilename} in $(pwd)"
-        backupLn "${fromFilenameRel}" "${toFilename}"
-        popd >&-
-    fi
-' {} ';'
+        # Check to see if the destination is already a link to the correct file
+        if [ -h "${toFilename}" ] && [ "$(getLinkAbsoluteFilename ${toFilename})" = "${fromFilename}" ]; then
+            # Already linked to the correct file, skip
+            echo "File ${toFilename} already linked, skipping"
+        else
+            # Need to make the link
+            toFileDir="${toFilename%/*}"
+            fromFilenameRel=$(relativePath "${toFileDir}" "${fromFilename}")
+            pushd "${toFileDir}" >&-
+            echo "Linking ${fromFilenameRel} to ${toFilename} in $(pwd)"
+            backupLn "${fromFilenameRel}" "${toFilename}"
+            popd >&-
+        fi
+    ' {} ';'
+}
 
-HISTFILE="${HOME}/.bash_history"
-HISTALLFILE="${HOME}/.bash_history.all"
+installFiles "${HOME_ENV_ROOT}" "${DEST_DIR_BASE}"
+
+HISTFILE="${DEST_DIR_BASE}/.bash_history"
+HISTALLFILE="${DEST_DIR_BASE}/.bash_history.all"
 
 if [[ ! -f "${HISTFILE}" ]]; then
     echo "Creating ${HISTFILE}"
@@ -173,6 +180,8 @@ if [[ ! -f "${HISTALLFILE}" ]]; then
     echo "Creating ${HISTALLFILE}"
     printf "#0000000000\n \n" > ${HISTALLFILE}
 fi
+
+touch "${DEST_DIR_BASE}/.gitconfig-work"
 
 popd >&-
 popd >&-
