@@ -55,6 +55,7 @@ function relativePath () {
 
     local abssize=${#absolute[@]}
     local cursize=${#current[@]}
+    local level=0
 
     while [[ ${absolute[level]} == ${current[level]} ]]
     do
@@ -114,7 +115,9 @@ function backupFile {
         (( version++ ))
     done
 
-    cp "${filename}" "${filename}~${version}"
+    echo "Backup ${filename} to ${filename}~${version}"
+
+    mv "${filename}" "${filename}~${version}"
 }
 
 
@@ -122,9 +125,14 @@ function backupLn {
     local fromFilename=("${1}")
     local toFilename=("${2}")
 
-    if [ -f "${toFilename}" ]; then
-        backupFile "${toFilename}"
+    echo "Linking ${fromFilename} to ${toFilename} in $(pwd)"
+
+    if [ -h "${toFilename}" ]; then
+        # Just remove links
+        echo "Removing existing link ${toFilename}"
         rm -f "${toFilename}"
+    elif [ -f "${toFilename}" ]; then
+        backupFile "${toFilename}"
     fi
 
     ln -s "${fromFilename}" "${toFilename}"
@@ -151,11 +159,6 @@ function installFiles {
     ' {} ';'
 
 
-    export -f relativePath
-    export -f getLinkAbsoluteFilename
-    export -f backupFile
-    export -f backupLn
-
     # Get list of all the files, ignoring VIM's temp files .swp, .swo, and .swn
     find . -type f -a ! -name ".*.sw[pon]" -exec bash -c '
         f="$0"
@@ -178,7 +181,6 @@ function installFiles {
             toFileDir="${toFilename%/*}"
             fromFilenameRel=$(relativePath "${toFileDir}" "${fromFilename}")
             pushd "${toFileDir}" >&-
-            echo "Linking ${fromFilenameRel} to ${toFilename} in $(pwd)"
             backupLn "${fromFilenameRel}" "${toFilename}"
             popd >&-
         fi
@@ -186,6 +188,11 @@ function installFiles {
 
     popd >&-
 }
+
+export -f relativePath
+export -f getLinkAbsoluteFilename
+export -f backupFile
+export -f backupLn
 
 # Install files common to all OS envs
 installFiles "${HOME_ENV_ROOT}" "${DEST_DIR_BASE}"
