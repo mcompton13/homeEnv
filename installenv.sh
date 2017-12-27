@@ -138,6 +138,46 @@ function backupLn {
     ln -s "${fromFilename}" "${toFilename}"
 }
 
+function createDir {
+    local homeEnvRoot=("${1}")
+    local destDirBase=("${2}")
+    local d=("${3}")
+
+    #echo "******* CreateDir: ${destDirBase} ${d}"
+
+    local destDir="${destDirBase}${d#.}"
+    echo "Creating ${destDir}"
+    mkdir -p "${destDir}"
+}
+
+function installFile {
+    local homeEnvRoot=("${1}")
+    local destDirBase=("${2}")
+    local f=("${3}")
+    local filename="${f##*/}"
+    local filePathname="${f#.}"
+    local fromFilename="${homeEnvRoot}${filePathname}"
+    local toFilename="${destDirBase}${filePathname}"
+
+    #echo "******* filename=${filename}"
+    #echo "******* filePathname=${filePathname}"
+    #echo "******* fromFilename=${fromFilename}"
+    #echo "******* toFilename=${toFilename}"
+
+    # Check to see if the destination is already a link to the correct file
+    if [ -h "${toFilename}" ] && [ "$(getLinkAbsoluteFilename ${toFilename})" = "${fromFilename}" ]; then
+        # Already linked to the correct file, skip
+        echo "File ${toFilename} already linked, skipping"
+    else
+        # Need to make the link
+        toFileDir="${toFilename%/*}"
+        fromFilenameRel=$(relativePath "${toFileDir}" "${fromFilename}")
+        pushd "${toFileDir}" >&-
+        backupLn "${fromFilenameRel}" "${toFilename}"
+        pwd
+        popd >&-
+    fi
+}
 
 function installFiles {
     local homeEnvRoot=("${1}")
@@ -151,40 +191,11 @@ function installFiles {
     echo "Installing from '${homeEnvRoot}' to '${destDirBase}'"
     pushd ${homeEnvRoot} >&-
 
-    find . -type d -exec bash -c '
-       d="$0"
-       destDir='${destDirBase}'${d#.}
-       echo "Creating ${destDir}"
-       mkdir -p "${destDir}"
-    ' {} ';'
+    find . -type d -exec bash -c 'createDir "'${homeEnvRoot}'" "'${destDirBase}'" "$0"' {} ';'
 
 
     # Get list of all the files, ignoring VIM's temp files .swp, .swo, and .swn
-    find . -type f -a ! -name ".*.sw[pon]" -exec bash -c '
-        f="$0"
-        filename="${f##*/}"
-        filePathname="${f#.}"
-        fromFilename="'${homeEnvRoot}'${filePathname}"
-        toFilename="'${destDirBase}'${filePathname}"
-
-    #    echo "******* filename=${filename}"
-    #    echo "******* filePathname=${filePathname}"
-    #    echo "******* fromFilename=${fromFilename}"
-    #    echo "******* toFilename=${toFilename}"
-
-        # Check to see if the destination is already a link to the correct file
-        if [ -h "${toFilename}" ] && [ "$(getLinkAbsoluteFilename ${toFilename})" = "${fromFilename}" ]; then
-            # Already linked to the correct file, skip
-            echo "File ${toFilename} already linked, skipping"
-        else
-            # Need to make the link
-            toFileDir="${toFilename%/*}"
-            fromFilenameRel=$(relativePath "${toFileDir}" "${fromFilename}")
-            pushd "${toFileDir}" >&-
-            backupLn "${fromFilenameRel}" "${toFilename}"
-            popd >&-
-        fi
-    ' {} ';'
+    find . -type f -a ! -name ".*.sw[pon]" -exec bash -c 'installFile '"${homeEnvRoot}"' "'${destDirBase}'" "$0"' {} ';'
 
     popd >&-
 }
@@ -193,6 +204,8 @@ export -f relativePath
 export -f getLinkAbsoluteFilename
 export -f backupFile
 export -f backupLn
+export -f createDir
+export -f installFile
 
 # Install files common to all OS envs
 installFiles "${HOME_ENV_ROOT}" "${DEST_DIR_BASE}"
