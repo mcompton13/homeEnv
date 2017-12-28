@@ -4,9 +4,6 @@
 # see /usr/share/doc/bash/examples/startup-files for examples. The files are
 # located in the bash-doc package.
 
-#TODO: Detect Linux vs. BSD
-export SYS='BSD'
-
 # the default umask is set in /etc/profile; for setting the umask
 # for ssh logins, install and configure the libpam-umask package.
 #umask 022
@@ -75,22 +72,8 @@ if [ -n "`type tput 2>&-`" ]; then
     export txtRst=`tput sgr0`     # Text Reset
 fi
 
-# Setup the file type and directory colors used by ls
-if [ "$SYS" = "LINUX" ] && [ -z "$LS_COLORS" ] && `type dircolors 2>/dev/null >&2`; then
-    # Check for a color settings in user's home directory
-    if [ -r ${HOME}/.dircolors ]; then
-        eval "`dircolors ${HOME}/.dircolors`"
-    else # Use the system default settings
-        eval "`dircolors`"
-    fi
-elif [ "$SYS" = "BSD" ] && [ -z "$LSCOLORS" ]; then
-    export LSCOLORS=ExGxFxdaCxDaDahBaDaCEC
-    export LS_COLORS="di=01;34:fi=0:ln=01;36:pi=33;40:so=33;40:bd=33;40:cd=33;40:mi=0:ex=01;32:*.rpm=90"
-fi
-
 # Set env so less uses lesspipe for more friendly behavior when viewing non-text
 # input files, see lesspipe(1)
 if [ -z "$LESSOPEN" -o -z "$LESSCLOSE" ] && `type lesspipe 2>/dev/null >&2`; then
     eval "`SHELL=/bin/sh lesspipe`"
 fi
-
