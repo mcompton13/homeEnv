@@ -12,6 +12,9 @@ popd >&-
 # Go to the directory containing this script
 pushd "${0%/*}" >&-
 
+# Include the functions from the realpath.sh script so they can be used below
+source $(pwd)/realpath.sh
+
 # The home environment is expected to be in a directory named "home" with the
 # same parent directory as this script.
 HOME_ENV_ROOT=$(pwd)/home
@@ -29,6 +32,7 @@ if [ "${UNAME}" == "DARWIN" ]; then
     OS_NAME="darwin"
 elif [ "${UNAME}" == "LINUX" ]; then
     OS_TYPE="linux"
+    #TODO: Determine specific linux distro
     OS_NAME="ubuntu"
 fi
 
@@ -87,26 +91,6 @@ function relativePath () {
     echo "$newpath"
 }
 
-
-function getLinkAbsoluteFilename {
-    local filename="${1##*/}"
-    local fileDir="${1%/*}"
-    pushd "${fileDir}" >&-
-    local linkFullFilename=$(readlink "${filename}")
-    local linkFilename="${linkFullFilename##*/}"
-    local linkDir="${linkFullFilename%/*}"
-
-    if [ -f "${linkFullFilename}" ]; then
-        pushd "${linkDir}" >&-
-        if [ -f "${linkFilename}" ]; then
-            echo "$(pwd)/${linkFilename}"
-        fi
-        popd >&-
-    fi
-    popd >&-
-}
-
-
 function backupFile {
     local filename=("${1}")
     local version=0
@@ -159,18 +143,24 @@ function installFile {
     local fromFilename="${homeEnvRoot}${filePathname}"
     local toFilename="${destDirBase}${filePathname}"
 
+    if [ -h "${fromFilename}" ]; then
+        # The file being installed is a link, get the absolute realpath
+        fromFilename="$(realpath ${fromFilename})"
+    fi
+
     #echo "******* filename=${filename}"
     #echo "******* filePathname=${filePathname}"
     #echo "******* fromFilename=${fromFilename}"
     #echo "******* toFilename=${toFilename}"
 
     # Check to see if the destination is already a link to the correct file
-    if [ -h "${toFilename}" ] && [ "$(getLinkAbsoluteFilename ${toFilename})" = "${fromFilename}" ]; then
+    if [ -h "${toFilename}" ] && [ "$(realpath ${toFilename})" = "${fromFilename}" ]; then
         # Already linked to the correct file, skip
         echo "File ${toFilename} already linked, skipping"
     else
         # Need to make the link
         toFileDir="${toFilename%/*}"
+        #echo "******* toFileDir=${toFileDir}"
         fromFilenameRel=$(relativePath "${toFileDir}" "${fromFilename}")
         pushd "${toFileDir}" >&-
         backupLn "${fromFilenameRel}" "${toFilename}"
@@ -191,17 +181,34 @@ function installFiles {
     echo "Installing from '${homeEnvRoot}' to '${destDirBase}'"
     pushd ${homeEnvRoot} >&-
 
+    # Get a list of all directories and create them by executing the createDir function for each found
     find . -type d -exec bash -c 'createDir "'${homeEnvRoot}'" "'${destDirBase}'" "$0"' {} ';'
 
-
-    # Get list of all the files, ignoring VIM's temp files .swp, .swo, and .swn
-    find . -type f -a ! -name ".*.sw[pon]" -exec bash -c 'installFile '"${homeEnvRoot}"' "'${destDirBase}'" "$0"' {} ';'
+    # Get list of all the files and links, ignoring VIM's temp files .swp, .swo, and .swn
+    # and execute the installFile function for each file found
+   find . \( -type f -o -type l \) -a ! -name ".*.sw[pon]" \
+       -exec bash -c 'installFile '"${homeEnvRoot}"' "'${destDirBase}'" "$0"' {} ';'
 
     popd >&-
 }
 
+# Need to export functions so the subshells run by find -exec can get to the functions
+export -f realpath
+export -f resolve_symlinks
+export -f canonicalize_path
+export -f readlink
+export -f _has_command
+export -f _system_readlink
+export -f _emulated_readlink
+export -f _gnu_stat_readlink
+export -f _bsd_stat_readlink
+export -f _resolve_symlinks
+export -f _canonicalize_dir_path
+export -f _canonicalize_file_path
+export -f _assert_no_path_cycles
+export -f _prepend_dir_context_if_necessary
+export -f _prepend_path_if_relative
 export -f relativePath
-export -f getLinkAbsoluteFilename
 export -f backupFile
 export -f backupLn
 export -f createDir
