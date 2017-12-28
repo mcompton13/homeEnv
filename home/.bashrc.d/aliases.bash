@@ -50,16 +50,5 @@ fi
 alias tree='smartpage 1 tree -C'
 
 # Some shortcuts for different directory listings
-# Using colors and page results when output to TTY
-if [ "${SYS}" = "BSD" ]; then
-    alias ls='COLUMNS=$(tput cols) CLICOLOR_FORCE=1 smartpage 1 ls -GC -h'
-elif [ "${SYS}" = "LINUX" ]; then
-    alias ls='smartpage 2 ls --color=always -w${COLUMNS} -hC --group-directories-first'
-fi
 alias la='ls -A'   # all but . and ..
 alias ll='ls -Al'  # all with long detailed list
-
-# Add an "alert" alias for long running commands.  Use like so:
-#   sleep 10; alert
-alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
-
