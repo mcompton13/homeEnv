@@ -13,7 +13,7 @@
 #alias ssh='ssh -A -X'
 
 # Make sudo an alias so other aliases get expanded and work in the sudo env
-alias sudo='sudo  '
+alias sudo='sudo '
 
 # Alias all of the executables in the user's home bin to their full path so
 # that they will work in sudo
@@ -52,3 +52,7 @@ alias tree='smartpage 1 tree -C'
 # Some shortcuts for different directory listings
 alias la='ls -A'   # all but . and ..
 alias ll='ls -Al'  # all with long detailed list
+
+alias pp_json='python -m json.tool'
+alias pp_xml='xmllint --format -'
+
