@@ -56,3 +56,5 @@ alias ll='ls -Al'  # all with long detailed list
 alias pp_json='python -m json.tool'
 alias pp_xml='xmllint --format -'
 
+alias randchars='head -c 10000 /dev/urandom | LC_CTYPE=C tr -dc 'a-z1-9' | cut -c1-'
+
