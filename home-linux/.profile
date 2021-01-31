@@ -7,7 +7,7 @@
 # This is a Linux specific .profile
 
 # Source the shared .profile
-source .profile-common
+source ${HOME}/.profile-common
 
 # Setup the file type and directory colors used by ls
 if [ -z "$LS_COLORS" ] && `type dircolors 2>/dev/null >&2`; then

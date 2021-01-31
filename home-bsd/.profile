@@ -7,7 +7,7 @@
 # This is a BSD specific .profile
 
 # Source the shared .profile
-source .profile-common
+source ${HOME}/.profile-common
 
 # Setup the file type and directory colors used by ls
 if [ -z "$LSCOLORS" ]; then
