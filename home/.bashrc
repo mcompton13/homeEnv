@@ -157,9 +157,18 @@ ed -s ${HISTFILE} <<EOF
 \$a
 ${newLine}
 .
-1,'eg/^${escapedNewLine}$/^,.d
+1,'eg/^${escapedNewLine}$/-,.d
 w
 EOF
+
+# Per line comments for the ed commands above
+# \$ke                            Mark the current last line in the file as 'e
+# \$a                             Append command
+# ${newLine}                      newLine to append
+# .                               Exit input mode
+# 1,'eg/^${escapedNewLine}$/-,.d  From line 1 to 'e that match the RE for the newLine that was just added,
+#                                   then for each matching line delete (d) the previous line (-) to the line (.)
+# w                               Write the changes to the file to disk
 
     fi
 
@@ -465,3 +474,4 @@ PS1="${defaultColor}["\
 
 
 fi # closing if [ -n "$PS1" ]; then
+
